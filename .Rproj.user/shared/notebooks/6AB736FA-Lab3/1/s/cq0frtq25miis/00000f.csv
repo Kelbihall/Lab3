@@ -1,0 +1,6 @@
+"0","colorado %>%"
+"0","  filter(date == my.date) %>%"
+"0","  slice_max(new_cases, n = 5) %>%"
+"0","  select(Date = date, County = county, Cases = new_cases) %>%"
+"0","  flextable() %>%"
+"0","  set_caption(""Most New Cases"")"

@@ -1,0 +1,232 @@
+state_covid = covid_data %>%
+group_by(date, state) %>%
+summarise(cases=sum(cases)) %>%
+filter(state &>% c('New York',"Ohio",'Colorado', "Alabama")) %>%
+library(tidyverse); library(flextable)
+data = read_csv( 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv')
+install.packages("tidyverse")
+install.packages("tidyverse")
+install.packages(flextable)
+install.packages("flextable")
+install.packages("flextable")
+install.packages(zoo)
+installed.packages(zoo)
+install.packages("zoo")
+library(tidyverse); library(flextable)
+data = read_csv( 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv')
+my.date <- as.Date("2022-02-01")
+my.state <- "Colorado"
+class(my.date)
+class(my.state)
+colorado <- data |›
+colorado <-data |›
+colorado <- data %>%
+filter(state == my.state) %>%
+group_by(county) %>%
+arrange(date) %>%
+mutate(
+new_cases = cases - lag(cases),
+new_deaths = deaths - lag(deaths)
+) %>%
+ungroup()
+library(dplyr)
+library(flextable)
+colorado %>%
+filter(date == my.date) %>%
+slice_max(cases, n = 5) %>%
+select(Date = date, County = county, Cases = cases) %>%
+flextable() %>%
+set_caption("Most Total Cases")
+colorado %>%
+filter(date == my.date) %>%
+slice_max(cases, n = 5) %>%
+select(Date = date, County = county, Cases = cases) %>%
+flextable() %>%
+set_caption("Most Total Cases")
+colorado %>%
+filter(date == my.date) %>%
+slice_max(new_cases, n = 5) %>%
+select(Date = date, County = county, Cases = new_cases) %>%
+flextable() %>%
+set_caption("Most New Cases")
+pop_url <- https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv'
+pop_url <- "https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv"
+pop <- read.csv(pop_url) %>%
+filter(COUNTY != 0) %>%  # Remove state-level rows
+mutate(fips = paste0(sprintf("%02d", STATE), sprintf("%03d", COUNTY))) %>%
+select(fips, contains("NAME"), contains("2021"))  # Keep relevant columns
+pop_url <-"https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv"
+pop <- read.csv(pop_url) %>%
+filter(COUNTY != 0) %>%  # Remove state-level rows
+mutate(fips = paste0(sprintf("%02d", STATE), sprintf("%03d", COUNTY))) %>%
+select(fips, contains("NAME"), contains("2021"))  # Keep relevant columns
+pop_url <-"https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv"
+pop <- read.csv(pop_url) %>%
+filter(COUNTY != 0) %>%  # Remove state-level rows
+mutate(fips = paste0(sprintf("%02d", STATE), sprintf("%03d", COUNTY))) %>%
+select(fips, contains("NAME"), contains("2021"))  # Keep relevant columns
+names(pop)
+dim(pop)
+nrow(pop)
+str(pop)
+glimpse(pop)
+range(pop$POPESTIMATE2021)
+perCap <- inner_join(
+colorado,
+select(pop, fips, pop = POPESTIMATE2021),
+by = "fips"
+) %>%
+filter(date == my.date) %>%
+mutate(
+cumPerCap = cases / pop,
+newCasesPerCap = new_cases / pop,
+newDeathsPerCap = new_deaths / pop
+)
+library(tidyverse); library(flextable)
+data = read_csv( 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv')
+my.date <- as.Date("2022-02-01")
+my.state <- "Colorado"
+class(my.date)
+class(my.state)
+colorado <- data %>%
+filter(state == my.state) %>%
+group_by(county) %>%
+arrange(date) %>%
+mutate(
+new_cases = cases - lag(cases),
+new_deaths = deaths - lag(deaths)
+) %>%
+ungroup()
+colorado %>%
+filter(date == my.date) %>%
+slice_max(cases, n = 5) %>%
+select(Date = date, County = county, Cases = cases) %>%
+flextable() %>%
+set_caption("Most Total Cases")
+pop_url <-"https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv"
+pop <- read.csv(pop_url) %>%
+filter(COUNTY != 0) %>%  # Remove state-level rows
+mutate(fips = paste0(sprintf("%02d", STATE), sprintf("%03d", COUNTY))) %>%
+select(fips, contains("NAME"), contains("2021"))  # Keep relevant columns
+names(pop)
+dim(pop)
+nrow(pop)
+str(pop)
+glimpse(pop)
+range(pop$POPESTIMATE2021)
+perCap <- inner_join(
+colorado,
+select(pop, fips, pop = POPESTIMATE2021),
+by = "fips"
+) %>%
+filter(date == my.date) %>%
+mutate(
+cumPerCap = cases / pop,
+newCasesPerCap = new_cases / pop,
+newDeathsPerCap = new_deaths / pop
+)
+perCap %>%
+slice_max(cumPerCap, n = 5) %>%
+select(Date = date, County = county, `Per Capita Cases` = cumPerCap) %>%
+flextable() %>%
+set_caption("Top 5 Counties with Most Cumulative Cases Per Capita")
+perCap %>%
+slice_max(newCasesPerCap, n = 5) %>%
+select(Date = date, County = county, `Per Capita New Cases` = newCasesPerCap) %>%
+flextable() %>%
+set_caption("Top 5 Counties with Most New Cases Per Capita")
+safe <- pop %>%
+inner_join(colorado, by = "fips") %>%
+filter(between(date, my.date - 13, my.date)) %>%
+group_by(county) %>%
+summarize(lag = sum(new_cases, na.rm = TRUE) / (max(POPESTIMATE2021, na.rm = TRUE) / 100000)
+) %>%
+ungroup() %>%
+select(County = county, Cases = lag) %>%
+slice_max(Cases, n = 10) %>%
+flextable() %>%
+set_caption("Cases per 100,000 in the last 14 days")
+safe <- pop %>%
+inner_join(colorado, by = "fips") %>%
+filter(between(date, my.date - 13, my.date)) %>%
+group_by(county) %>%
+summarize(lag = sum(new_cases, na.rm = TRUE) / (max(POPESTIMATE2021, na.rm = TRUE) / 100000)
+) %>%
+ungroup() %>%
+select(County = county, Cases = lag) %>%
+slice_max(Cases, n = 10) %>%
+flextable() %>%
+set_caption("Cases per 100,000 in the last 14 days")
+safe
+death_data <- colorado %>%
+mutate(year = year(date)) %>%
+filter(year == 2021) %>%
+group_by(fips) %>%
+summarize(deaths = sum(new_deaths, na.rm = TRUE)) %>%
+left_join(pop, by = "fips") %>%
+mutate(death_ratio = 100 * (deaths / DEATHS2021)) %>%
+select(CTYNAME, deaths, DEATHS2021, death_ratio) %>%
+filter(death_ratio > 20)
+ggplot(death_data, aes(x = reorder(CTYNAME, death_ratio), y = death_ratio)) +
+geom_col(fill = "red") +
+coord_flip() +
+labs(
+title = "Counties Where COVID Deaths Account for 20%+ of Total Deaths (2021)",
+x = "County",
+y = "COVID Death Percentage"
+) +
+theme_light()
+death_data <- colorado %>%
+mutate(year = year(date)) %>%
+filter(year == 2021) %>%
+group_by(fips) %>%
+summarize(deaths = sum(new_deaths, na.rm = TRUE)) %>%
+left_join(pop, by = "fips") %>%
+mutate(death_ratio = 100 * (deaths / DEATHS2021)) %>%
+select(CTYNAME, deaths, DEATHS2021, death_ratio) %>%
+filter(death_ratio > 20)
+ggplot(death_data, aes(x = reorder(CTYNAME, death_ratio), y = death_ratio)) +
+geom_col(fill = "red") +
+coord_flip() +
+labs(
+title = "Counties Where COVID Deaths Account for 20%+ of Total Deaths (2021)",
+x = "Death_Ratio",
+y = "City"
+) +
+theme_light()
+death_data <- colorado %>%
+mutate(year = year(date)) %>%
+filter(year == 2021) %>%
+group_by(fips) %>%
+summarize(deaths = sum(new_deaths, na.rm = TRUE)) %>%
+left_join(pop, by = "fips") %>%
+mutate(death_ratio = 100 * (deaths / DEATHS2021)) %>%
+select(CTYNAME, deaths, DEATHS2021, death_ratio) %>%
+filter(death_ratio > 20)
+ggplot(death_data, aes(x = reorder(CTYNAME, death_ratio), y = death_ratio)) +
+geom_col(fill = "red") +
+coord_flip() +
+labs(
+title = "Counties Where COVID Deaths Account for 20%+ of Total Deaths (2021)",
+x = "City Name",
+y = "Death Ratio"
+) +
+theme_light()
+death_data <- colorado %>%
+mutate(year = year(date)) %>%
+filter(year == 2021) %>%
+group_by(fips) %>%
+summarize(deaths = sum(new_deaths, na.rm = TRUE)) %>%
+left_join(pop, by = "fips") %>%
+mutate(death_ratio = 100 * (deaths / DEATHS2021)) %>%
+select(CTYNAME, deaths, DEATHS2021, death_ratio) %>%
+filter(death_ratio > 20)
+ggplot(death_data, aes(x = reorder(CTYNAME, death_ratio), y = death_ratio)) +
+geom_col(fill = "red") +
+coord_flip() +
+labs(
+title = "Counties Where COVID Deaths Account for 20%+ of Total Deaths (2021)",
+x = "City Name",
+y = "Death Ratio"
+) +
+theme_light()

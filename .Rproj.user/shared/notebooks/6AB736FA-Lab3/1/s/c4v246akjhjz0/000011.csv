@@ -1,0 +1,6 @@
+"0",""
+"0","perCap %>%"
+"0","  slice_max(newCasesPerCap, n = 5) %>%"
+"0","  select(Date = date, County = county, `Per Capita New Cases` = newCasesPerCap) %>%"
+"0","  flextable() %>%"
+"0","  set_caption(""Top 5 Counties with Most New Cases Per Capita"")"

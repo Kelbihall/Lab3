@@ -1,0 +1,315 @@
+---
+title: "Lab 3: COVID-19"
+subtitle: "Ecosystem Science and Sustainability"
+author:
+  - name: "Kelbi Hall"
+    email: "kelbihal@colostate.edu"
+format: html
+---
+#Question 1
+
+```{r}
+library(tidyverse); library(flextable)
+covid_data = read_csv( 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv')
+```
+
+#Question 2
+
+```{r}
+my.date <- as.Date("2022-02-01")
+my.state <- "Colorado"
+
+class(my.date) 
+class(my.state)
+
+```
+```{r}
+
+library(readr)
+library(flextable)
+
+covid_data <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
+
+if (!exists("my.state")) my.state <- "Colorado"
+if (!exists("my.date")) my.date <- as.Date("2022-02-01")
+
+colorado <- covid_data[covid_data$state == my.state, ]
+
+if (nrow(colorado) == 0) {
+  stop("Error: No data found for 'my.state'. Check your dataset.")
+}
+
+colorado <- colorado[order(colorado$county, colorado$date), ]
+
+
+colorado$new_cases <- c(NA, diff(colorado$cases))
+colorado$new_deaths <- c(NA, diff(colorado$deaths))
+
+if (!my.date %in% colorado$date) {
+  stop("Error: 'my.date' is not found in the dataset. Check date formatting.")
+}
+
+
+most_total_cases <- subset(colorado, date == my.date)
+most_total_cases <- most_total_cases[order(-most_total_cases$cases), ][1:5, c("date", "county", "cases")]
+
+
+most_new_cases <- subset(colorado, date == my.date)
+most_new_cases <- most_new_cases[order(-most_new_cases$new_cases), ][1:5, c("date", "county", "new_cases")]
+
+
+most_total_cases <- flextable(most_total_cases) %>% set_caption("Most Total Cases")
+most_new_cases <- flextable(most_new_cases) %>% set_caption("Most New Cases")
+
+
+most_total_cases
+most_new_cases
+
+```
+```{r}
+colorado %>%
+  filter(date == my.date) %>%
+  slice_max(new_cases, n = 5) %>%
+  select(Date = date, County = county, Cases = new_cases) %>%
+  flextable() %>%
+  set_caption("Most New Cases")
+
+```
+
+#Question 3
+
+```{r}
+pop_url <-"https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv"
+
+pop <- read.csv(pop_url) %>%
+  filter(COUNTY != 0) %>%  # Remove state-level rows
+  mutate(fips = paste0(sprintf("%02d", STATE), sprintf("%03d", COUNTY))) %>%
+  select(fips, contains("NAME"), contains("2021"))  # Keep relevant columns
+
+names(pop)       
+dim(pop)        
+nrow(pop)       
+str(pop)       
+glimpse(pop)  
+
+range(pop$POPESTIMATE2021)
+
+perCap <- inner_join(
+  colorado,
+  select(pop, fips, pop = POPESTIMATE2021),
+  by = "fips"
+) %>%
+  filter(date == my.date) %>%
+  mutate(
+    cumPerCap = cases / pop,
+    newCasesPerCap = new_cases / pop,
+    newDeathsPerCap = new_deaths / pop
+  )
+
+perCap %>%
+  slice_max(cumPerCap, n = 5) %>%
+  select(Date = date, County = county, `Per Capita Cases` = cumPerCap) %>%
+  flextable() %>%
+  set_caption("Top 5 Counties with Most Cumulative Cases Per Capita")
+
+perCap %>%
+  slice_max(newCasesPerCap, n = 5) %>%
+  select(Date = date, County = county, `Per Capita New Cases` = newCasesPerCap) %>%
+  flextable() %>%
+  set_caption("Top 5 Counties with Most New Cases Per Capita")
+
+```
+
+#Question 4
+
+```{r}
+safe <- pop %>%
+  inner_join(colorado, by = "fips") %>%
+  filter(between(date, my.date - 13, my.date)) %>% 
+  group_by(county) %>%
+  summarize(lag = sum(new_cases, na.rm = TRUE) / (max(POPESTIMATE2021, na.rm = TRUE) / 100000)  
+  ) %>%
+  ungroup() %>%
+  select(County = county, Cases = lag) %>%
+  slice_max(Cases, n = 10) %>%  
+  flextable() %>%
+  set_caption("Cases per 100,000 in the last 14 days")
+
+safe
+
+```
+
+#Question 5 
+```{r}
+death_data <- colorado %>%
+  mutate(year = year(date)) %>%  
+  filter(year == 2021) %>%
+  group_by(fips) %>%
+  summarize(deaths = sum(new_deaths, na.rm = TRUE)) %>%
+  left_join(pop, by = "fips") %>%  
+  mutate(death_ratio = 100 * (deaths / DEATHS2021)) %>%
+  select(CTYNAME, deaths, DEATHS2021, death_ratio) %>%
+  filter(death_ratio > 20)  
+
+ggplot(death_data, aes(x = reorder(CTYNAME, death_ratio), y = death_ratio)) +
+  geom_col(fill = "red") +
+  coord_flip() +
+  labs(
+    title = "Counties Where COVID Deaths Account for 20%+ of Total Deaths (2021)",
+    x = "City Name",
+    y = "Death Ratio"
+  ) +
+  theme_light()
+```
+
+
+#Question 6
+
+```{r}
+
+covid_data <- covid_data %>%
+  group_by(state, county) %>% 
+  arrange(state, county, date) %>% 
+  mutate(new_cases = cases - lag(cases, default = 0)) %>%  
+  ungroup()
+
+state_covid <- covid_data %>%
+  filter(state %in% c("New York", "Ohio", "Colorado", "Alabama")) %>%  
+  group_by(date, state) %>%
+  summarise(daily_new_cases = sum(new_cases, na.rm = TRUE)) %>% 
+  ungroup() %>%
+  arrange(state, date) %>%
+  group_by(state) %>%
+  mutate(roll = zoo::rollmean(daily_new_cases, k = 7, fill = NA, align = "right")) %>%
+  ungroup()
+
+
+ggplot(state_covid, aes(x = date)) +
+  geom_col(aes(y = daily_new_cases), fill = "pink", col = NA) +  
+  geom_line(aes(y = roll), col = "darkred", size = 1) +  
+  theme_linedraw() +
+  facet_wrap(~ state, nrow = 2, scales = "free_y") +  
+  labs(
+    title = "Daily COVID-19 Cases with 7-Day Rolling Average",
+    x = "Date",
+    y = "New Cases"
+  )
+
+
+state_pop <- pop %>%
+  group_by(STNAME) %>%
+  summarise(state_pop = sum(POPESTIMATE2021, na.rm = TRUE))  
+
+
+state_covid_percap <- state_covid %>%
+  inner_join(state_pop, by = c("state" = "STNAME")) %>%  
+  mutate(
+    perCap = daily_new_cases / state_pop * 100000,  
+    roll_perCap = zoo::rollmean(perCap, k = 7, align = "right", fill = NA)  
+  )
+
+
+ggplot(state_covid_percap, aes(x = date)) +
+  geom_line(aes(y = roll_perCap, color = state), size = 1) +  
+  theme_linedraw() +
+  labs(
+    title = "Cumulative COVID-19 Cases",
+    x = "Date",
+    y = "Cases Per 100,000 People",
+    color = "State"
+  )
+
+```
+
+#Question 7
+```{r}
+
+county_centroids <- read_csv("https://raw.githubusercontent.com/mikejohnson51/csu-ess-330/refs/heads/main/resources/county-centroids.csv")
+
+covid_with_location <- covid_data %>%
+  inner_join(county_centroids, by = "fips")  
+
+wm_center <- covid_with_location %>%
+  group_by(date) %>%
+  summarise(
+    wmX_c = sum(LON * cases, na.rm = TRUE) / sum(cases, na.rm = TRUE),  
+    wmY_c = sum(LAT * cases, na.rm = TRUE) / sum(cases, na.rm = TRUE),  
+    total_cases = sum(cases, na.rm = TRUE),  
+    month = format(date, "%m")  
+  ) %>%
+  arrange(date) %>%
+  mutate(day_index = row_number())  
+
+ggplot(wm_center) +
+  borders("state", fill = "gray90", colour = "white") +  
+  geom_point(aes(x = wmX_c, y = wmY_c, size = total_cases, color = month), alpha = 0.8) +  
+  scale_size(range = c(2, 10)) +  
+  theme_linedraw() +
+  labs(
+    title = "Weighted Center of COVID-19 Cases Over Time",
+    x = "Longitude",
+    y = "Latitude",
+    color = "Month",
+    size = "Total Cases"
+  ) +
+  theme(legend.position = "none")  
+
+```
+
+#Question 8
+```{r}
+library(patchwork)
+
+county_centroids <- read_csv("https://raw.githubusercontent.com/mikejohnson51/csu-ess-330/refs/heads/main/resources/county-centroids.csv")
+
+covid_with_location <- covid_data %>%
+  inner_join(county_centroids, by = "fips")
+
+wm_center <- covid_with_location %>%
+  group_by(date) %>%
+  summarise(
+
+    wmX_c = sum(LON * cases, na.rm = TRUE) / sum(cases, na.rm = TRUE),
+    wmY_c = sum(LAT * cases, na.rm = TRUE) / sum(cases, na.rm = TRUE),
+    total_cases = sum(cases, na.rm = TRUE),
+
+    wmX_d = sum(LON * deaths, na.rm = TRUE) / sum(deaths, na.rm = TRUE),
+    wmY_d = sum(LAT * deaths, na.rm = TRUE) / sum(deaths, na.rm = TRUE),
+    total_deaths = sum(deaths, na.rm = TRUE)
+  ) %>%
+  arrange(date) %>%
+  mutate(day_index = row_number())  
+
+p_cases <- ggplot(wm_center) +
+  borders("state", fill = "gray90", colour = "white") +  
+  geom_point(aes(x = wmX_c, y = wmY_c, size = total_cases), color = "red", alpha = 0.5) +  
+  theme_linedraw() +
+  labs(
+    title = "Weighted Center of COVID-19 Cases",
+    x = "",
+    y = "",
+    size = "Cases"
+  ) +
+  theme(legend.position = "none")
+
+p_deaths <- ggplot(wm_center) +
+  borders("state", fill = "gray90", colour = "white") +  
+  geom_point(aes(x = wmX_d, y = wmY_d, size = total_deaths), color = "navy", alpha = 0.5) + 
+  theme_linedraw() +
+  labs(
+    title = "Weighted Center of COVID-19 Deaths",
+    x = "",
+    y = "",
+    size = "Deaths"
+  ) +
+  theme(legend.position = "none")
+
+p_cases | p_deaths  
+
+```
+
+```{r}
+print(str(data))  # Check structure during rendering
+print(head(data))  # View first rows
+```
+
